@@ -141,8 +141,9 @@ def settings():
     if request.method == "POST":
         scheduler.save_config(c, **{k: request.form[k] for k in scheduler.DEFAULTS
                                     if k in request.form})
-        for k in ("provider", "publisher", "wp_site_url", "wp_username",
-                  "wp_app_password", "wp_category_id", "wp_author_id"):
+        for k in ("provider", "publisher", "laravel_endpoint", "laravel_token",
+                  "wp_site_url", "wp_username", "wp_app_password",
+                  "wp_category_id", "wp_author_id"):
             if request.form.get(k) is not None:
                 db.set_setting(c, k, request.form.get(k))
         c.commit()
@@ -150,8 +151,9 @@ def settings():
         return redirect(url_for("settings"))
     cfg = {k: db.get_setting(c, k, v) for k, v in scheduler.DEFAULTS.items()}
     extra = {k: db.get_setting(c, k, "") for k in
-             ("provider", "publisher", "wp_site_url", "wp_username",
-              "wp_app_password", "wp_category_id", "wp_author_id")}
+             ("provider", "publisher", "laravel_endpoint", "laravel_token",
+              "wp_site_url", "wp_username", "wp_app_password",
+              "wp_category_id", "wp_author_id")}
     return render_template("settings.html", cfg=cfg, extra=extra,
                            active_provider=generator.pick_provider(c))
 

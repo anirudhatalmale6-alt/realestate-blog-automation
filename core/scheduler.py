@@ -7,10 +7,11 @@ later of "now" and "the last thing already scheduled", and take the first slot
 that is free and at least `min_gap_hours` after the previous post. That gives
 an evenly spaced calendar without ever double-booking a time.
 
-The default days/times below are sensible starting points for a UK property
-audience, not gospel - once the site has a few months of analytics, replace
-them with the real best-performing slots. They are stored in settings so that
-is a config change, not a code change.
+The default days/times below are sensible starting points for a Dubai property
+audience - note the UAE working week runs Monday to Friday with the weekend on
+Saturday and Sunday, so the slots sit mid-week. They are NOT measured. Once the
+site has a few months of analytics, replace them with the real best-performing
+slots; they live in settings so that is a config change, not a code change.
 """
 from datetime import datetime, timedelta, time as dtime
 from zoneinfo import ZoneInfo
@@ -18,7 +19,7 @@ from zoneinfo import ZoneInfo
 from . import db
 
 DEFAULTS = {
-    "timezone": "Europe/London",
+    "timezone": "Asia/Dubai",
     "publish_days": "1,2,3",          # Mon=0 ... Sun=6  -> Tue, Wed, Thu
     "publish_times": "09:30,13:00",
     "min_gap_hours": "36",

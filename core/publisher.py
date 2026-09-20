@@ -1,7 +1,13 @@
 """Publishing + the social distribution hook.
 
-The publisher is an adapter: swap `WordPressPublisher` for whatever the site
-actually runs on and nothing else in the pipeline changes.
+The publisher is an adapter: swap the adapter for whatever the site actually
+runs on and nothing else in the pipeline changes.
+
+dxbproperty.ae is Laravel (PHP 8.4 / LiteSpeed) with its own blog at /blog and
+/ar/blog, so `LaravelApiPublisher` is the live path — it POSTs the finished
+article to a single token-protected route added to his app. `WordPressPublisher`
+is kept because the adapter interface is the point, not because this site needs
+it.
 
 Social distribution is deliberately built now and switched off. `fan_out()`
 reads the `distribution_channels` table, and every publish calls it. Today the
@@ -88,10 +94,74 @@ class WordPressPublisher(BasePublisher):
         return {"remote_id": str(data.get("id")), "remote_url": data.get("link")}
 
 
+class LaravelApiPublisher(BasePublisher):
+    """POST the finished article to a token-protected route in his Laravel app.
+
+    The route is ~60 lines added to his codebase (see `laravel/` in this repo).
+    Nothing here needs a server login, a database password, or SSH.
+
+    The payload deliberately uses OUR field names. The Laravel side maps them to
+    whatever his `blogs` table actually calls its columns, so an unexpected
+    schema is one config array to edit, not a rewrite on this side.
+    """
+    name = "laravel"
+
+    def __init__(self, endpoint, token, locale="en", timeout=30):
+        self.endpoint = endpoint
+        self.token = token
+        self.locale = locale
+        self.timeout = timeout
+
+    def _payload(self, post):
+        return {
+            "locale": post.get("locale") or self.locale,
+            "title": post["title"],
+            "slug": post["slug"],
+            "excerpt": post["excerpt"] or "",
+            "body_html": post["body_html"],
+            "meta_title": post.get("meta_title") or post["title"],
+            "meta_desc": post.get("meta_desc") or post["excerpt"] or "",
+            "status": "published",
+            "published_at": post.get("scheduled_for") or db.now(),
+            # set when the Arabic half of a pair is sent, so his app can link
+            # the two rows as translations of each other
+            "translation_of": post.get("translation_remote_id"),
+        }
+
+    def publish(self, post):
+        req = urllib.request.Request(
+            self.endpoint,
+            data=json.dumps(self._payload(post)).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self.token}",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                data = json.loads(resp.read().decode() or "{}")
+        except urllib.error.HTTPError as e:
+            raise PublishError(f"Laravel {e.code}: {e.read().decode()[:400]}") from e
+        except urllib.error.URLError as e:
+            raise PublishError(f"Laravel endpoint unreachable: {e.reason}") from e
+
+        if not data.get("id"):
+            raise PublishError(f"endpoint returned no post id: {str(data)[:200]}")
+        return {"remote_id": str(data["id"]), "remote_url": data.get("url")}
+
+
 def build_publisher(conn):
     """Which adapter to use, from settings. Defaults to dry-run so nothing
     can go live by accident before the site is wired up."""
     kind = db.get_setting(conn, "publisher", "dryrun")
+    if kind == "laravel":
+        endpoint = db.get_setting(conn, "laravel_endpoint", "")
+        token = db.get_setting(conn, "laravel_token", "")
+        if not endpoint or not token:
+            raise PublishError("laravel_endpoint and laravel_token must both be set")
+        return LaravelApiPublisher(endpoint, token)
     if kind == "wordpress":
         return WordPressPublisher(
             site_url=db.get_setting(conn, "wp_site_url", ""),

@@ -21,9 +21,9 @@
         <input type="number" step="1" id="posts_per_week" name="posts_per_week" value="{{ cfg['posts_per_week'] }}"></div>
     </div>
     <p class="muted small" style="margin:14px 0 0">
-      Defaults are Tue/Wed/Thu at 09:30 and 13:00 — a reasonable starting point for a UK
-      property audience. Once the site has three months of analytics, swap these for the
-      slots that actually perform.
+      Defaults are Tue/Wed/Thu at 09:30 and 13:00 Dubai time — mid-week, inside the UAE
+      working week. A reasonable starting point, but not measured. Once the site has three
+      months of analytics, swap these for the slots that actually perform.
     </p>
   </div>
 
@@ -47,13 +47,25 @@
 
   <div class="card">
     <h2 style="margin-top:0">Destination</h2>
-    <div class="field" style="max-width:320px">
+    <div class="field" style="max-width:340px">
       <label for="publisher">Publish to</label>
       <select id="publisher" name="publisher">
-        <option value="dryrun" {{ 'selected' if extra['publisher'] != 'wordpress' }}>Dry run (nothing goes live)</option>
+        <option value="dryrun" {{ 'selected' if extra['publisher'] not in ('wordpress','laravel') }}>Dry run (nothing goes live)</option>
+        <option value="laravel" {{ 'selected' if extra['publisher']=='laravel' }}>Laravel site (dxbproperty.ae)</option>
         <option value="wordpress" {{ 'selected' if extra['publisher']=='wordpress' }}>WordPress REST API</option>
       </select>
     </div>
+    <div class="row">
+      <div class="field"><label for="laravel_endpoint">Import endpoint</label>
+        <input type="text" id="laravel_endpoint" name="laravel_endpoint" value="{{ extra['laravel_endpoint'] }}" placeholder="https://dxbproperty.ae/blogbot/import"></div>
+      <div class="field"><label for="laravel_token">Bearer token</label>
+        <input type="text" id="laravel_token" name="laravel_token" value="{{ extra['laravel_token'] }}" placeholder="matches BLOGBOT_TOKEN in your .env"></div>
+    </div>
+    <p class="muted small" style="margin:10px 0 18px">
+      The Laravel option posts the finished article to one token-protected route
+      in your own app — no server login, no database password, no SSH. The route
+      is in the laravel/ folder of the repo.
+    </p>
     <div class="row">
       <div class="field"><label for="wp_site_url">Site URL</label>
         <input type="text" id="wp_site_url" name="wp_site_url" value="{{ extra['wp_site_url'] }}" placeholder="https://example.co.uk"></div>

@@ -19,9 +19,18 @@ from . import db, keywords as kw
 # --------------------------------------------------------------------------
 
 def slugify(text):
-    s = re.sub(r"[^a-zA-Z0-9\s-]", "", text).strip().lower()
-    s = re.sub(r"[\s-]+", "-", s)
-    return s[:70].strip("-")
+    """ASCII slug where possible, UTF-8 slug where not.
+
+    Arabic titles strip to an empty string under an ASCII-only rule, and an
+    empty slug is worse than a non-Latin one — Google indexes UTF-8 slugs
+    fine. So: drop punctuation, keep letters and digits of any script.
+    """
+    s = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE).strip().lower()
+    s = re.sub(r"[\s_-]+", "-", s, flags=re.UNICODE)
+    if len(s) > 70:
+        s = s[:70].rsplit("-", 1)[0]      # never cut a word in half
+    s = s.strip("-")
+    return s or "post"
 
 
 def word_count(html):
@@ -29,18 +38,21 @@ def word_count(html):
 
 
 SYSTEM_PROMPT = """You are a working real-estate writer producing blog posts for \
-an estate agency's website. Write the way a knowledgeable agent talks to a client: \
-plain, specific, useful. No hype, no filler openings like "In today's fast-paced \
-market", no stock phrases, no emoji.
+a Dubai property agency's website. The audience is largely international buyers \
+and investors looking at the UAE. Write the way a knowledgeable agent talks to a \
+client: plain, specific, useful. No hype, no filler openings like "In today's \
+fast-paced market", no stock phrases, no emoji.
 
 Rules:
 - 700-1000 words.
 - Open with the reader's actual problem in one or two sentences. Never open with a definition.
-- Use concrete numbers, timeframes and steps. If you don't know a local figure, \
-describe how the reader can find it rather than inventing one.
-- Never invent statistics, prices, laws or named sources.
-- British English unless the keyword clearly indicates otherwise.
-- Cover the topic honestly, including the downsides.
+- Use concrete numbers, timeframes and steps. If you don't know a current figure, \
+describe how the reader can check it rather than inventing one.
+- Never invent statistics, prices, laws, fees or named sources. Dubai property \
+regulation changes often: describe the process and name the authority to verify \
+with (DLD, RERA, the developer), never state a fee or rule as current fact.
+- Prices in AED unless the keyword says otherwise.
+- International English. Cover the topic honestly, including the downsides.
 
 Return JSON only, matching the schema you are given."""
 
@@ -125,8 +137,8 @@ _OPENERS = [
     "you know which ones apply to you, the less time you waste.",
     "There is a short answer and a long one. The short answer rarely survives contact "
     "with a real property, so here is the long one.",
-    "Get this wrong and it costs you weeks, not pounds — and weeks are the expensive "
-    "part of any move.",
+    "Get this wrong and it costs you weeks rather than dirhams — and on a purchase "
+    "with a handover date attached, weeks are the expensive part.",
 ]
 
 _SECTIONS = {
@@ -194,7 +206,7 @@ _PROSE = [
     "are dull, they are cheap to look at, and they are the only things that reliably "
     "kill a deal late.",
     "Comparables are only useful if they are genuinely comparable. Same street is better "
-    "than same postcode, same layout is better than same number of bedrooms, and anything "
+    "than same community, same layout is better than same number of bedrooms, and anything "
     "older than six months is context rather than evidence.",
     "Be honest with yourself about what is a preference and what is a requirement. "
     "Preferences are negotiable and requirements are not, and confusing the two is how "
@@ -203,6 +215,21 @@ _PROSE = [
     "is acting for you. When something slips — and something usually does — the person "
     "with the clearest notes sets the terms of the conversation.",
 ]
+
+
+# Keyword lists are typed lowercase; these still need to read as proper nouns
+# in a headline. Extend as his own list arrives.
+_PROPER_NOUNS = (
+    "Dubai", "Abu Dhabi", "Sharjah", "UAE", "Dubai Marina", "Downtown Dubai",
+    "Palm Jumeirah", "Business Bay", "JVC", "JLT", "DIFC", "Emaar", "DAMAC",
+    "Nakheel", "RERA", "DLD", "Expo", "Golden Visa",
+)
+
+
+def _fix_proper_nouns(text):
+    for noun in sorted(_PROPER_NOUNS, key=len, reverse=True):
+        text = re.sub(rf"\b{re.escape(noun)}\b", noun, text, flags=re.IGNORECASE)
+    return text
 
 
 def generate_template(keyword):
@@ -225,7 +252,7 @@ def generate_template(keyword):
                   f"What to know about {phrase}",
                   f"{title_phrase} — the practical detail"],
     }
-    title = rng.choice(title_forms.get(intent, title_forms["informational"]))
+    title = _fix_proper_nouns(rng.choice(title_forms.get(intent, title_forms["informational"])))
 
     parts = [f"<p>{rng.choice(_OPENERS)} This piece sets out what matters for "
              f"<strong>{phrase}</strong>, in the order it usually matters.</p>"]
@@ -250,8 +277,9 @@ def generate_template(keyword):
                  f"sanity-check a plan before you act on it.</p>")
 
     body = "\n".join(parts)
-    excerpt = (f"A plain-English look at {phrase} — what decides the outcome, where people "
-               f"lose time, and the checks worth doing first.")
+    excerpt = _fix_proper_nouns(
+        f"A plain-English look at {phrase} — what decides the outcome, where people "
+        f"lose time, and the checks worth doing first.")
 
     return {
         "title": title,

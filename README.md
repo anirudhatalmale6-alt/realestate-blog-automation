@@ -22,9 +22,10 @@ approval gate in the middle.** Nothing publishes without a click.
 ## Running it
 
 ```bash
-python3 demo.py --reset     # seed sample keywords, draft 3, approve, show calendar
-python3 web/app.py          # UI on http://127.0.0.1:5057
-python3 test_pipeline.py    # 30 end-to-end checks
+python3 demo.py --reset          # seed sample keywords, draft 3, approve, show calendar
+python3 web/app.py               # UI on http://127.0.0.1:5057
+python3 test_pipeline.py         # 30 end-to-end checks
+python3 test_laravel_adapter.py  # 14 checks against a stub of the Laravel route
 ```
 
 Cron in production:
@@ -77,12 +78,21 @@ the rhythm, keeping the existing order.
 
 ## Publishing
 
-`publisher.py` is an adapter. `WordPressPublisher` posts to the WP REST API v2
-using an **Application Password** (Users → Profile → Application Passwords) —
-not the account password, so it can be revoked on its own. `DryRunPublisher` is
-the default, so nothing can go live before the site is wired up.
+`publisher.py` is an adapter.
 
-Swap in a different adapter for a non-WordPress site and nothing else changes.
+**dxbproperty.ae is Laravel** (PHP 8.4 / LiteSpeed) with its own blog at `/blog`
+and `/ar/blog` — no WordPress anywhere. `LaravelApiPublisher` POSTs the finished
+article to one token-protected route added to his app; the whole server-side
+footprint is in [`laravel/`](laravel/README.md). No server login, no database
+password, no SSH.
+
+`WordPressPublisher` (Application Password, not the account password) is kept
+because the adapter interface is the point. `DryRunPublisher` is the **default**,
+so nothing can go live before the site is wired up.
+
+Verified by `test_laravel_adapter.py`: 14 checks against a stub endpoint that
+behaves like the Laravel route — token rejection, payload shape, UTF-8 Arabic
+slugs, EN/AR translation linking, unreachable endpoint.
 
 ## Social distribution — built, dormant
 

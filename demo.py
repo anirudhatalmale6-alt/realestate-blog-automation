@@ -10,17 +10,18 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core import db, keywords as kw, generator, scheduler, publisher  # noqa: E402
 
+# Placeholders in his market until he sends the real list.
 SAMPLE_KEYWORDS = """\
-how to value a house before selling
-best time of year to sell a flat
-letting agent fees explained
-what does a property survey actually cover
-buying a leasehold flat: what to check
-shared ownership vs help to buy
-how long does conveyancing take
-selling a house with tenants in it
-estate agent commission compared
-houses for sale in Didsbury
+how to buy property in dubai as a foreigner
+off plan vs ready property dubai
+dubai golden visa property investment
+service charges in dubai explained
+best areas to invest in dubai 2026
+dubai property service charge vs rent yield
+how long does dubai property registration take
+selling an off plan property before handover
+dubai land department fees explained
+apartments for sale in Dubai Marina
 """
 
 
