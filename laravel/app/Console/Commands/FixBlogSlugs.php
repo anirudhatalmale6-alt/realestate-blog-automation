@@ -106,16 +106,36 @@ class FixBlogSlugs extends Command
 
     private function slugFor(string $title): string
     {
-        $latin = Str::slug($title);
-        if ($latin !== '') {
-            return Str::limit($latin, 70, '');
+        // Str::slug() does NOT return '' for Arabic — it transliterates, so
+        // "دليل شراء العقارات" becomes "dlyl-shraaa-alaakarat", which is
+        // gibberish to an Arabic reader and no better than the Latin we are
+        // replacing. Decide by script, not by whether Str::slug() succeeded.
+        $slug = $this->isNonLatin($title)
+            ? trim(Str::lower(preg_replace('/[^\p{L}\p{N}]+/u', '-', $title)), '-')
+            : Str::slug($title);
+
+        $slug = $this->trimToWord($slug, 70);
+
+        return $slug !== '' ? $slug : 'post-' . Str::lower(Str::random(6));
+    }
+
+    /** Has letters, but none of them Latin — Arabic, Cyrillic, CJK and so on. */
+    private function isNonLatin(string $text): bool
+    {
+        return preg_match('/\p{L}/u', $text) === 1 && preg_match('/[A-Za-z]/', $text) !== 1;
+    }
+
+    /** Cut to a maximum length without slicing a word in half. */
+    private function trimToWord(string $slug, int $max): string
+    {
+        if (mb_strlen($slug) <= $max) {
+            return trim($slug, '-');
         }
 
-        // Arabic title: Str::slug() empties it, so build a UTF-8 slug instead.
-        $utf8 = preg_replace('/[^\p{L}\p{N}]+/u', '-', $title);
-        $utf8 = trim(Str::lower($utf8), '-');
+        $cut = mb_substr($slug, 0, $max);
+        $lastDash = mb_strrpos($cut, '-');
 
-        return $utf8 !== '' ? Str::limit($utf8, 70, '') : 'post-' . Str::lower(Str::random(6));
+        return trim($lastDash !== false ? mb_substr($cut, 0, $lastDash) : $cut, '-');
     }
 
     private function makeUnique(string $table, string $slugCol, ?string $localeCol, string $locale, string $slug, $id, array $planned): string

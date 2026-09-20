@@ -21,9 +21,27 @@ use Illuminate\Support\Facades\Route;
 
 // 1. Import endpoint -------------------------------------------------------
 
+/*
+ * The CSRF middleware has been renamed twice, and `withoutMiddleware()` matches
+ * on the exact class string the web group registered — naming the wrong one
+ * silently does nothing and every import comes back 419 CSRF token mismatch.
+ * (Found by running this, not by reading it.) So exclude every name that
+ * exists in the installed version; excluding one that isn't registered is a
+ * no-op, which makes this safe on Laravel 10 through 13.
+ *
+ * The endpoint is not left unprotected — `blogbot.token` guards it, which is
+ * the right check for a machine-to-machine call. CSRF protects browser form
+ * posts carrying a session cookie; this request has neither.
+ */
+$csrfClasses = array_values(array_filter([
+    'Illuminate\Foundation\Http\Middleware\PreventRequestForgery',  // Laravel 13+
+    'Illuminate\Foundation\Http\Middleware\ValidateCsrfToken',      // Laravel 11–12
+    'Illuminate\Foundation\Http\Middleware\VerifyCsrfToken',        // Laravel 10 and below
+], 'class_exists'));
+
 Route::post('/blogbot/import', [BlogbotImportController::class, 'store'])
     ->middleware('blogbot.token')
-    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+    ->withoutMiddleware($csrfClasses);
 
 // 2. Sitemap ---------------------------------------------------------------
 

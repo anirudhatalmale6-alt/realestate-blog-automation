@@ -37,6 +37,12 @@ class BlogbotImportController extends Controller
         // Never collide with an existing post: -2, -3, ... until the slug is free.
         $data['slug'] = $this->uniqueSlug($model, $columns['slug'], $data['slug'], $locale, $columns['locale']);
 
+        // A published post with a null published_at sorts and renders wrongly on
+        // most blog templates, so never let one through without a date.
+        if (($data['status'] ?? 'published') === 'published' && empty($data['published_at'])) {
+            $data['published_at'] = now();
+        }
+
         $row = config('blogbot.defaults', []);
 
         foreach ($columns as $field => $column) {
@@ -67,16 +73,18 @@ class BlogbotImportController extends Controller
 
     private function uniqueSlug(string $model, string $slugColumn, string $slug, string $locale, ?string $localeColumn): string
     {
-        // Prefer a normalised Latin slug. Str::slug() empties Arabic titles, so
-        // when that happens keep the UTF-8 slug we were sent — Google indexes
-        // those fine, and a random string would be worse than the Latin we are
-        // replacing. Random is the last resort only.
+        // Str::slug() transliterates a non-Latin slug into ASCII gibberish
+        // rather than returning '' — "دليل-شراء" becomes "dlyl-shraaa". Keep
+        // the UTF-8 slug in that case; Google indexes those fine.
         $base = trim($slug);
-        $latin = Str::slug($base);
 
-        if ($latin !== '') {
-            $base = $latin;
-        } elseif ($base === '') {
+        if (preg_match('/\p{L}/u', $base) === 1 && preg_match('/[A-Za-z]/', $base) !== 1) {
+            $base = trim(Str::lower(preg_replace('/[^\p{L}\p{N}]+/u', '-', $base)), '-');
+        } else {
+            $base = Str::slug($base);
+        }
+
+        if ($base === '') {
             $base = 'post-' . Str::lower(Str::random(6));
         }
 

@@ -5,12 +5,42 @@ Your site is Laravel (PHP 8.4, LiteSpeed) with its own blog at `/blog` and
 entire server-side footprint: **one route, one controller, two middlewares, one
 new table, one artisan command.** Nothing existing is modified.
 
-> **Honest caveat:** I have not seen your `blogs` table or run this inside your
-> app. Every file here parses cleanly (`php -l`) and the engine side is tested
-> against a stub that behaves like this route (`test_laravel_adapter.py`, 14
-> checks), but the column names in `config/blogbot.php` are my best guess from
-> what the live site renders. Send me the migration or `SHOW CREATE TABLE` and
-> I will correct them — it is one config file, not a rewrite.
+## Tested — against a real Laravel install, not just read through
+
+All of this now runs on a throwaway Laravel app with a `blogs` table and a blog
+controller written to stand in for yours, seeded with your real post titles and
+the real Latin slugs off the live site.
+
+```
+php artisan test --filter=BlogbotTest     20 tests, 46 assertions, all passing
+```
+
+Drop `tests/Feature/BlogbotTest.php` into your own app and run that command —
+**if your column names differ from `config/blogbot.php`, this is where you find
+out**, before anything touches live data.
+
+Running it rather than reading it turned up four real bugs:
+
+| Found | Why `php -l` could never catch it |
+|---|---|
+| **Every import returned 419 CSRF token mismatch.** The CSRF middleware has been renamed twice (`VerifyCsrfToken` → `ValidateCsrfToken` → `PreventRequestForgery`) and `withoutMiddleware()` matches the exact class string, so naming the old one silently does nothing. | Valid PHP either way. Now excludes every name that exists, so it is right on Laravel 10 through 13. |
+| **Arabic slugs came out as ASCII gibberish** — `Str::slug()` does not return `''` for Arabic, it *transliterates*: `دليل شراء العقارات` became `dlyl-shraaa-alaakarat`. No better than the Latin being replaced. | Now decided by script, so Arabic titles keep real Arabic slugs. |
+| **English slugs were cut mid-word** at the 70-character limit — `...process-for-in`. | Now trims on a word boundary. |
+| **Imported posts had a null `published_at`**, which sorts and renders wrongly on most blog templates. | Now always dated when the status is published. |
+
+One test is worth calling out because it nearly shipped as theatre: the obvious
+way to test the CSRF fix is to POST to the endpoint and assert 201 — but Laravel
+disables CSRF verification in the testing environment, so that assertion passes
+whether the bug is there or not. I checked by reintroducing the bug; the test
+still passed. It now asserts on the route's excluded-middleware list instead,
+and I verified it **fails** with the bug present and passes without it.
+
+> **Still not proven:** your actual `blogs` table. The column names in
+> `config/blogbot.php` are inferred from what the live site renders. Send me the
+> migration or `SHOW CREATE TABLE` and I will correct them — one config file,
+> not a rewrite. Note also that `author_id` / `category_id` are left unset
+> unless you fill in `defaults` in that config; if those columns are `NOT NULL`
+> on your table, set them or the insert will fail.
 
 ## Files
 
@@ -23,6 +53,8 @@ new table, one artisan command.** Nothing existing is modified.
 | `app/Console/Commands/FixBlogSlugs.php` | same path | Rebuilds the Latin slugs from the real titles. |
 | `database/migrations/2026_09_20_000000_create_blog_slug_redirects_table.php` | same path | One new table. Touches nothing existing. |
 | `routes/blogbot.php` | `routes/blogbot.php` | Import endpoint + sitemap. |
+| `tests/Feature/BlogbotTest.php` | same path | 20 tests over all of the above. |
+| `resources/views/article-jsonld.blade.php` | same path | `Article` structured data for the post view. |
 
 ## Install
 
