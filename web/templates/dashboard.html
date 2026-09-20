@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Dashboard</h1>
+<p class="sub">Drafts wait here for your approval. Nothing publishes until you say so.</p>
+
+<div class="grid g4" style="margin-bottom:20px">
+  <div class="stat"><b>{{ counts['pending_review'] }}</b><span>Awaiting approval</span></div>
+  <div class="stat"><b>{{ counts['scheduled'] }}</b><span>Scheduled</span></div>
+  <div class="stat"><b>{{ counts['published'] }}</b><span>Published</span></div>
+  <div class="stat"><b>{{ kw_unused }}/{{ kw_total }}</b><span>Keywords unused</span></div>
+</div>
+
+<div class="card">
+  <form method="post" action="{{ url_for('generate') }}" class="row">
+    <div class="field" style="max-width:150px">
+      <label for="count">Draft how many?</label>
+      <input type="number" id="count" name="count" value="3" min="1" max="10">
+    </div>
+    <button class="primary" type="submit">Generate drafts</button>
+    <p class="muted small" style="margin:0 0 2px">
+      Picks the least-used keywords first. Writer: <strong>{{ provider }}</strong>.
+    </p>
+  </form>
+</div>
+
+<h2>Awaiting your approval</h2>
+{% if pending %}
+<div class="card">
+<table>
+  <tr><th>Title</th><th>Keyword</th><th>Words</th><th style="width:230px">Decision</th></tr>
+  {% for p in pending %}
+  <tr>
+    <td><a href="{{ url_for('post_detail', post_id=p['id']) }}">{{ p['title'] }}</a>
+        <div class="muted small">{{ p['excerpt'][:110] }}…</div></td>
+    <td class="small">{{ p['phrase'] }}</td>
+    <td class="small slot">{{ p['word_count'] }}</td>
+    <td>
+      <form method="post" action="{{ url_for('approve', post_id=p['id']) }}" class="inline">
+        <button class="ok" type="submit">Approve</button></form>
+      <form method="post" action="{{ url_for('reject', post_id=p['id']) }}" class="inline">
+        <button type="submit" class="danger">Reject</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% else %}
+<div class="card muted">Nothing waiting. Generate a batch above.</div>
+{% endif %}
+
+<h2>Next up</h2>
+<div class="card">
+  {% if upcoming %}
+  <table>
+    <tr><th>When</th><th>Title</th></tr>
+    {% for p in upcoming %}
+    <tr><td class="slot small">{{ p['scheduled_for']|dt }}</td>
+        <td><a href="{{ url_for('post_detail', post_id=p['id']) }}">{{ p['title'] }}</a></td></tr>
+    {% endfor %}
+  </table>
+  <p class="muted small" style="margin:12px 0 0">
+    Publishing on {{ cfg['publish_days'] }} (Mon=0) at {{ cfg['publish_times'] }},
+    {{ cfg['timezone'] }} — change on Settings.
+  </p>
+  {% else %}
+  <span class="muted">Nothing scheduled yet.</span>
+  {% endif %}
+</div>
+{% endblock %}

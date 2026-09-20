@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ post['title'] }}{% endblock %}
+{% block body %}
+<div class="grid g2">
+  <div>
+    <h1>{{ post['title'] }}</h1>
+    <p class="sub">
+      <span class="pill p-{{ post['status'] }}">{{ post['status'].replace('_',' ') }}</span>
+      &nbsp;{{ post['word_count'] }} words &nbsp;·&nbsp; keyword: {{ post['phrase'] }}
+      {% if post['scheduled_for'] %}&nbsp;·&nbsp; {{ post['scheduled_for']|dt }}{% endif %}
+    </p>
+
+    <div class="card article">
+      <p class="muted"><em>{{ post['excerpt'] }}</em></p>
+      <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+      {{ post['body_html']|safe }}
+    </div>
+  </div>
+
+  <div>
+    {% if post['status'] == 'pending_review' %}
+    <div class="card">
+      <h2 style="margin-top:0">Your decision</h2>
+      <form method="post" action="{{ url_for('approve', post_id=post['id']) }}">
+        <input type="hidden" name="next" value="{{ url_for('post_detail', post_id=post['id']) }}">
+        <div class="field"><label for="note">Note (optional)</label>
+          <input type="text" id="note" name="note" placeholder="e.g. tighten the intro"></div>
+        <button class="ok" type="submit">Approve &amp; schedule</button>
+      </form>
+      <form method="post" action="{{ url_for('reject', post_id=post['id']) }}" style="margin-top:8px">
+        <input type="hidden" name="next" value="{{ url_for('post_detail', post_id=post['id']) }}">
+        <button type="submit" class="danger">Reject</button>
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <h2 style="margin-top:0">SEO</h2>
+      <p class="small"><strong>Title</strong><br>{{ post['meta_title'] }}</p>
+      <p class="small"><strong>Description</strong><br>{{ post['meta_desc'] }}</p>
+      <p class="small"><strong>Slug</strong><br><code>{{ post['slug'] }}</code></p>
+      <p class="small muted">Written by: {{ post['provider'] }}</p>
+      {% if post['remote_url'] %}
+      <p class="small"><a href="{{ post['remote_url'] }}" target="_blank" rel="noopener">View live post</a></p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">History</h2>
+      {% for e in events %}
+        <div class="small"><span class="muted slot">{{ e['created_at'] }}</span>
+          — {{ e['kind'] }} {% if e['detail'] %}<span class="muted">{{ e['detail'] }}</span>{% endif %}</div>
+      {% else %}<span class="muted small">No events.</span>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

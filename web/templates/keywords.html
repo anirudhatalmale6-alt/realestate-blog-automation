@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Keywords</h1>
+<p class="sub">One phrase per line, or CSV: phrase, intent, locality, priority (1–10).</p>
+
+<div class="card">
+  <form method="post">
+    <div class="field">
+      <label for="keywords">Paste your list</label>
+      <textarea id="keywords" name="keywords" placeholder="how to value a house before selling&#10;best time of year to sell a flat&#10;letting agent fees explained&#10;houses for sale in Didsbury"></textarea>
+    </div>
+    <button class="primary" type="submit">Add to pool</button>
+    <span class="muted small">Existing phrases are updated, not duplicated.</span>
+  </form>
+</div>
+
+<div class="card">
+  <table>
+    <tr><th>Phrase</th><th>Intent</th><th>Locality</th><th>Priority</th><th>Used</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r['phrase'] }}</td>
+      <td class="small muted">{{ r['intent'] }}</td>
+      <td class="small muted">{{ r['locality'] or '—' }}</td>
+      <td class="small slot">{{ r['priority'] }}</td>
+      <td class="small slot">{{ r['times_used'] }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">Pool is empty.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

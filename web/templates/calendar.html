@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Calendar</h1>
+<p class="sub">Approved posts, spaced evenly across your publishing slots.</p>
+
+<div class="card row">
+  <form method="post" action="{{ url_for('rebalance') }}" class="inline">
+    <button type="submit">Re-space everything</button></form>
+  <form method="post" action="{{ url_for('publish_due') }}" class="inline">
+    <button type="submit" class="primary">Publish anything due now</button></form>
+  <span class="muted small" style="margin-bottom:8px">
+    In production a cron job runs the publish step every 15 minutes — this button is the manual equivalent.
+  </span>
+</div>
+
+{% for week, items in weeks.items() %}
+  <div class="week">Week {{ week }}</div>
+  <div class="card">
+    <table>
+      <tr><th style="width:170px">Slot</th><th>Title</th><th>Status</th><th style="width:300px">Move / pause</th></tr>
+      {% for it in items %}
+      <tr>
+        <td class="slot small">{{ it['when']|dt }}</td>
+        <td><a href="{{ url_for('post_detail', post_id=it['id']) }}">{{ it['title'] }}</a></td>
+        <td><span class="pill p-{{ it['status'] }}">{{ it['status'] }}</span></td>
+        <td>
+          {% if it['status'] == 'scheduled' %}
+          <form method="post" action="{{ url_for('reschedule', post_id=it['id']) }}" class="row" style="gap:6px">
+            <input type="datetime-local" name="when" style="max-width:190px"
+                   value="{{ it['when'].strftime('%Y-%m-%dT%H:%M') }}">
+            <button type="submit">Move</button>
+          </form>
+          <form method="post" action="{{ url_for('pause', post_id=it['id']) }}" style="margin-top:6px">
+            <button type="submit" class="danger">Pause</button></form>
+          {% elif it['remote_url'] %}
+          <a class="small" href="{{ it['remote_url'] }}" target="_blank" rel="noopener">View live</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+{% else %}
+  <div class="card muted">Nothing on the calendar yet — approve a draft and it lands here.</div>
+{% endfor %}
+{% endblock %}

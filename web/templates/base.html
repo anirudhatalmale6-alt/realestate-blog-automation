@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Blog automation{% endblock %}</title>
+<style>
+  :root{
+    --ink:#16202b; --muted:#6b7a89; --line:#e2e8ee; --bg:#f6f8fa;
+    --card:#fff; --accent:#1f5f8b; --accent-soft:#eaf2f8;
+    --ok:#1f7a4d; --ok-soft:#e7f4ed; --warn:#8a5a00; --warn-soft:#fdf3e0;
+    --bad:#a03030; --bad-soft:#fbeceb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent)}
+  header{background:var(--card);border-bottom:1px solid var(--line)}
+  header .in{max-width:1080px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:26px}
+  .brand{font-weight:700;letter-spacing:-.02em;padding:16px 0;font-size:16px}
+  .brand span{color:var(--accent)}
+  nav{display:flex;gap:22px}
+  nav a{padding:18px 0;display:inline-block;text-decoration:none;color:var(--muted);
+        font-weight:500;border-bottom:2px solid transparent}
+  nav a:hover{color:var(--ink)}
+  nav a.on{color:var(--accent);border-bottom-color:var(--accent)}
+  main{max-width:1080px;margin:0 auto;padding:26px 20px 60px}
+  h1{font-size:21px;margin:0 0 4px;letter-spacing:-.02em}
+  h2{font-size:16px;margin:28px 0 10px}
+  .sub{color:var(--muted);margin:0 0 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:16px}
+  .grid{display:grid;gap:14px}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .g2{grid-template-columns:2fr 1fr}
+  @media(max-width:760px){.g4{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stat b{display:block;font-size:26px;letter-spacing:-.03em}
+  .stat span{color:var(--muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.06em}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;
+     color:var(--muted);padding:0 10px 8px 0;border-bottom:1px solid var(--line);font-weight:600}
+  td{padding:11px 10px 11px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600}
+  .p-pending_review{background:var(--warn-soft);color:var(--warn)}
+  .p-scheduled{background:var(--accent-soft);color:var(--accent)}
+  .p-published{background:var(--ok-soft);color:var(--ok)}
+  .p-rejected,.p-paused{background:var(--bad-soft);color:var(--bad)}
+  button,.btn{font:inherit;font-weight:600;border-radius:7px;padding:8px 14px;cursor:pointer;
+    border:1px solid var(--line);background:#fff;color:var(--ink);text-decoration:none;display:inline-block}
+  button:hover,.btn:hover{border-color:#c6d2dd}
+  .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .primary:hover{background:#1a5177;border-color:#1a5177}
+  .ok{background:var(--ok);border-color:var(--ok);color:#fff}
+  .danger{color:var(--bad)}
+  input[type=text],input[type=number],input[type=datetime-local],textarea,select{
+    font:inherit;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#fff}
+  textarea{min-height:130px;resize:vertical}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);
+        text-transform:uppercase;letter-spacing:.05em;margin:0 0 5px}
+  .field{margin-bottom:14px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .row .field{flex:1;min-width:150px;margin-bottom:0}
+  .flash{background:var(--accent-soft);border:1px solid #cfe1ee;color:#16455f;
+         padding:10px 14px;border-radius:8px;margin-bottom:16px;font-weight:500}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+  .inline{display:inline}
+  .slot{font-variant-numeric:tabular-nums}
+  .week{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+        margin:22px 0 8px;font-weight:600}
+  .article h2{font-size:18px;margin:22px 0 8px}
+  .article p{margin:0 0 12px}
+  .article ul{margin:0 0 14px;padding-left:20px}
+  .article li{margin-bottom:5px}
+</style>
+</head>
+<body>
+<header><div class="in">
+  <div class="brand">Blog<span>bot</span></div>
+  <nav>
+    <a href="{{ url_for('dashboard') }}" class="{{ 'on' if request.endpoint=='dashboard' }}">Dashboard</a>
+    <a href="{{ url_for('keywords_page') }}" class="{{ 'on' if request.endpoint=='keywords_page' }}">Keywords</a>
+    <a href="{{ url_for('calendar_page') }}" class="{{ 'on' if request.endpoint=='calendar_page' }}">Calendar</a>
+    <a href="{{ url_for('settings') }}" class="{{ 'on' if request.endpoint=='settings' }}">Settings</a>
+  </nav>
+</div></header>
+<main>
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}
+  {% endwith %}
+  {% block body %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Settings</h1>
+<p class="sub">Publishing rhythm, the writer, and where posts go.</p>
+
+<form method="post">
+  <div class="card">
+    <h2 style="margin-top:0">Publishing rhythm</h2>
+    <div class="row">
+      <div class="field"><label for="publish_days">Days (Mon=0 … Sun=6)</label>
+        <input type="text" id="publish_days" name="publish_days" value="{{ cfg['publish_days'] }}"></div>
+      <div class="field"><label for="publish_times">Times</label>
+        <input type="text" id="publish_times" name="publish_times" value="{{ cfg['publish_times'] }}"></div>
+      <div class="field"><label for="timezone">Timezone</label>
+        <input type="text" id="timezone" name="timezone" value="{{ cfg['timezone'] }}"></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <div class="field"><label for="min_gap_hours">Minimum gap between posts (hours)</label>
+        <input type="number" step="1" id="min_gap_hours" name="min_gap_hours" value="{{ cfg['min_gap_hours'] }}"></div>
+      <div class="field"><label for="posts_per_week">Target posts per week</label>
+        <input type="number" step="1" id="posts_per_week" name="posts_per_week" value="{{ cfg['posts_per_week'] }}"></div>
+    </div>
+    <p class="muted small" style="margin:14px 0 0">
+      Defaults are Tue/Wed/Thu at 09:30 and 13:00 — a reasonable starting point for a UK
+      property audience. Once the site has three months of analytics, swap these for the
+      slots that actually perform.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Writer</h2>
+    <div class="field" style="max-width:320px">
+      <label for="provider">Generation provider</label>
+      <select id="provider" name="provider">
+        <option value="" {{ 'selected' if not extra['provider'] }}>Auto (use whichever API key is set)</option>
+        <option value="anthropic" {{ 'selected' if extra['provider']=='anthropic' }}>Anthropic (Claude)</option>
+        <option value="openai" {{ 'selected' if extra['provider']=='openai' }}>OpenAI</option>
+        <option value="template" {{ 'selected' if extra['provider']=='template' }}>Template (no API key — demo)</option>
+      </select>
+    </div>
+    <p class="muted small" style="margin:0">
+      Currently active: <strong>{{ active_provider }}</strong>.
+      API keys are read from the environment (ANTHROPIC_API_KEY / OPENAI_API_KEY) —
+      they are never stored in this database.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Destination</h2>
+    <div class="field" style="max-width:320px">
+      <label for="publisher">Publish to</label>
+      <select id="publisher" name="publisher">
+        <option value="dryrun" {{ 'selected' if extra['publisher'] != 'wordpress' }}>Dry run (nothing goes live)</option>
+        <option value="wordpress" {{ 'selected' if extra['publisher']=='wordpress' }}>WordPress REST API</option>
+      </select>
+    </div>
+    <div class="row">
+      <div class="field"><label for="wp_site_url">Site URL</label>
+        <input type="text" id="wp_site_url" name="wp_site_url" value="{{ extra['wp_site_url'] }}" placeholder="https://example.co.uk"></div>
+      <div class="field"><label for="wp_username">WP username</label>
+        <input type="text" id="wp_username" name="wp_username" value="{{ extra['wp_username'] }}"></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <div class="field"><label for="wp_app_password">Application password</label>
+        <input type="text" id="wp_app_password" name="wp_app_password" value="{{ extra['wp_app_password'] }}" placeholder="xxxx xxxx xxxx xxxx"></div>
+      <div class="field"><label for="wp_category_id">Category ID</label>
+        <input type="text" id="wp_category_id" name="wp_category_id" value="{{ extra['wp_category_id'] }}"></div>
+      <div class="field"><label for="wp_author_id">Author ID</label>
+        <input type="text" id="wp_author_id" name="wp_author_id" value="{{ extra['wp_author_id'] }}"></div>
+    </div>
+    <p class="muted small" style="margin:14px 0 0">
+      Use a WordPress Application Password, not the account password — it can be revoked
+      on its own without changing your login.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Social distribution</h2>
+    <p class="muted small" style="margin:0">
+      Built and dormant. Every publish calls the distribution hook, which fans out to the
+      channels table. No channels are configured, so today it does nothing — adding a
+      Facebook Page or LinkedIn channel later switches it on without touching the
+      publish path.
+    </p>
+  </div>
+
+  <button class="primary" type="submit">Save settings</button>
+</form>
+{% endblock %}
